@@ -3,7 +3,11 @@ package com.example.pets;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NavUtils;
 
+import android.content.ContentValues;
+import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -12,8 +16,10 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 import com.example.pets.data.PetContract.PetEntry;
+import com.example.pets.data.PetDbHelper;
 
 import android.os.Bundle;
+import android.widget.Toast;
 
 public class EditorActivity extends AppCompatActivity {
 
@@ -35,6 +41,8 @@ public class EditorActivity extends AppCompatActivity {
      */
     private int mGender = PetEntry.GENDER_UNKNOWN;
 
+    PetDbHelper mDbHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,6 +56,8 @@ public class EditorActivity extends AppCompatActivity {
 
         setupSpinner();
 
+        mDbHelper = new PetDbHelper(this);
+
     }
 
     /**
@@ -60,9 +70,9 @@ public class EditorActivity extends AppCompatActivity {
         genderSpinnerAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
         mGenderSpinner.setAdapter(genderSpinnerAdapter);
 
-        mGenderSpinner.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mGenderSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selection = (String) parent.getItemAtPosition(position);
                 if(!TextUtils.isEmpty(selection)){
                     if (selection.equals(getString(R.string.gender_male))){
@@ -75,12 +85,45 @@ public class EditorActivity extends AppCompatActivity {
                 }
             }
 
-
-
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mGender = PetEntry.GENDER_UNKNOWN;
+            }
 
 
         });
 
+    }
+
+    private void insertPet(){
+        String petName = mNameEditText.getText().toString().trim();
+        String petBreed = mBreedEditText.getText().toString().trim();
+        String petWeight = mWeightEditText.getText().toString().trim();
+        Integer petGender;
+        if(mGender==1){
+            petGender = 1;
+        }else if(mGender==2){
+            petGender = 2;
+        } else{
+            petGender = 0;
+        }
+
+        ContentValues values = new ContentValues();
+
+        values.put(PetEntry.COLUMN_PET_NAME, petName);
+        values.put(PetEntry.COLUMN_PET_BREED, petBreed);
+        values.put(PetEntry.COLUMN_PET_GENDER, petGender);
+        values.put(PetEntry.COLUMN_PET_WEIGHT, petWeight);
+
+        Uri newUri = getContentResolver().insert(PetEntry.CONTENT_URI,values);
+
+
+
+        if(newUri == null){
+            Toast.makeText(EditorActivity.this, "Pet insert error ", Toast.LENGTH_SHORT).show();
+        }else{
+            Toast.makeText(EditorActivity.this, "Pet insert Success", Toast.LENGTH_SHORT).show();
+        }
     }
 
     @Override
@@ -98,6 +141,8 @@ public class EditorActivity extends AppCompatActivity {
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
                 // Do nothing for now
+                insertPet();
+                finish();
                 return true;
             // Respond to a click on the "Delete" menu option
             case R.id.action_delete:
